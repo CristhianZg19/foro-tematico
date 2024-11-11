@@ -1,31 +1,46 @@
 "use client";
 
-import { useState } from 'react';
-import axios from 'axios'; // Import axios
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [userId, setUserId] = useState(null); // Estado para almacenar el userId
+  const router = useRouter();
+
+  useEffect(() => {
+    // Verifica si estamos en el cliente antes de acceder a localStorage
+    if (typeof window !== "undefined") {
+      const storedUserId = localStorage.getItem("userId");
+      if (storedUserId) {
+        setUserId(storedUserId);
+        router.push('/forum');
+      }
+    }
+  }, [router]); // Solo se ejecuta una vez al montar el componente
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError(''); // Reset error state
+    setError('');
 
     try {
-      // Cambiar '/api/login' por la ruta completa de la API
-      const response = await axios.post('http://localhost:5000/login', { username: email, password });
-      console.log('Login response:', response.data);
-      localStorage.setItem('role', response.data.role);
-      // Handle response data
-      if (response.data.token) {
+      const response = await axios.post('http://localhost:5000/login', {username: email, password});
+      
+      if (response.data.userId) {
+        localStorage.setItem('role', response.data.role);
+        localStorage.setItem('username', response.data.username);
+        localStorage.setItem('userId', response.data.userId);
+  
         window.location.href = '/forum';
       } else {
-        setError(response.data.message || 'Invalid credentials');
+        setError(response.data.message || 'Credenciales invalidas');
       }
     } catch (err) {
-      console.error('Login error:', err);
-      setError('An error occurred during login.');
+      setError(err.response.data.error || 'Server error');
     }
   };
 
@@ -113,9 +128,6 @@ const styles = {
     fontWeight: 'bold',
     cursor: 'pointer',
     transition: 'background-color 0.3s ease',
-  },
-  buttonHover: {
-    backgroundColor: '#005bb5',
   },
   error: {
     color: 'red',
